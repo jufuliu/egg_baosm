@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        .progressbar {
+            margin-top: 20px;
+            width: 200px;
+            height: 3px;
+            /* background-color: #808080; */
+            /* border: 1px solid #808080; */
+            border-radius: 1px;
+        }
+
+        .progressbar-inner {
+            width: 0;
+            height: 3px;
+            background-color: rgb(71, 71, 223);
+            /* border: 1px solid #808080; */
+            border-radius: 1px;
+        }
+    </style>
+</head>
+
+<body>
+    <form id="form" action="/upload" method="post"  enctype="multipart/form-data" target="formUpFile">
+            <input type="file" name="mfile" id="file" multiple>
+            
+    </form>
+    <button id="upload" onclick="upload()">上传</button>
+    <!-- <button id="upload"type="submit" onclick="upload()">上传</button> -->
+   
+    <div id="tip"></div>
+    <br />
+    <br />
+    <!-- <progress id="progressBar" value="0" max="100" style="width: 300px;"></progress> -->
+    <span id="percentage"></span>
+    <span id="time"></span>
+
+    <div class="progressbar" id="progressBar">
+        <div class="progressbar-inner" id="progressbar-inner"></div>
+    </div>
+    <iframe id="formUpFile" border="none" width="0" height="0" name="formUpFile"></iframe>
+</body>
+<script>
+    // document.getElementById('upload').addEventListener('click', function () {
+
+    //     upload();
+    // })
+    var ot; //
+    var oloaded;
+
+    function upload() {
+        console.log('uploading')
+        if(typeof FormData =='undefined'){
+            document.getElementById('form').submit();
+            return;
+        }
+        var data = {
+            customerId: 18612965670
+        };
+        var xhr = new XMLHttpRequest();
+        var input=document.getElementById('file');
+        console.log('input',input);
+        var file=null;
+        if(input.files){
+            file=input.files[0];
+        }else{
+            file=input
+        }
+        
+        if (!file) {
+            console.log('no file');
+            return;
+        } else {
+            console.log(file);
+        }
+        var formData = new FormData();
+        formData.append('mfile', file);
+        xhr.onreadystatechange = function () {
+            switch (xhr.readyState) {
+                case 0:
+                    //alert("请求未初始化");
+                    break;
+                case 1:
+                    //alert("请求启动，尚未发送");
+                    break;
+                case 2:
+                    //alert("请求发送，尚未得到响应");
+                    break;
+                case 3:
+                    //alert("请求开始响应，收到部分数据");
+                    break;
+                case 4:
+                    if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304) {
+                        var data = xhr.responseText;
+                        document.getElementById('tip').innerHTML = data;
+                    } else {
+                        alert("Request was unsuccessful : " + xhr.status + " " + xhr.statusText);
+                    }
+                    break;
+            }
+        }
+        xhr.open('post', '/upload');
+        // xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+
+        // xhr.readyState=4的时候执行
+        xhr.onload = function (data) {
+            // console.log('onload=',data);
+        }
+        xhr.upload.onloadstart = function () { //上传开始执行方法
+            ot = new Date().getTime(); //设置上传开始时间
+            oloaded = 0; //设置上传开始时，以上传的文件大小为0
+            console.log('start', ot)
+        };
+        xhr.upload.addEventListener('progress', progressFunction);
+        // xhr.upload.onprogress=progressFunction;
+        xhr.onerror = function (eror) {
+            console.log(eror);
+        }
+        xhr.send(formData);
+
+    }
+
+    //上传进度实现方法，上传过程中会频繁调用该方法
+    function progressFunction(evt) {
+        console.log(evt);
+        var progressBar = document.getElementById("progressbar-inner");
+        var percentageDiv = document.getElementById("percentage");
+        // event.total是需要传输的总字节，event.loaded是已经传输的字节。如果event.lengthComputable不为真，则event.total等于0
+        if (evt.lengthComputable) { //
+            // progressBar.max = evt.total;
+            // progressBar.value = evt.loaded;
+            progressBar.style.width = Math.round(evt.loaded / evt.total * 100) + "%";
+            percentageDiv.innerHTML = Math.round(evt.loaded / evt.total * 100) + "%";
+        }
+
+        var time = document.getElementById("time");
+        var nt = new Date().getTime(); //获取当前时间
+        var pertime = (nt - ot) / 1000; //计算出上次调用该方法时到现在的时间差，单位为s
+        ot = new Date().getTime(); //重新赋值时间，用于下次计算
+
+        var perload = evt.loaded - oloaded; //计算该分段上传的文件大小，单位b       
+        oloaded = evt.loaded; //重新赋值已上传文件大小，用以下次计算
+
+        //上传速度计算
+        var speed = perload / pertime; //单位b/s
+        var bspeed = speed;
+        var units = 'b/s'; //单位名称
+        if (speed / 1024 > 1) {
+            speed = speed / 1024;
+            units = 'k/s';
+        }
+        if (speed / 1024 > 1) {
+            speed = speed / 1024;
+            units = 'M/s';
+        }
+        speed = speed.toFixed(1);
+        //剩余时间
+        var resttime = ((evt.total - evt.loaded) / bspeed).toFixed(1);
+        time.innerHTML = '，速度：' + speed + units + '，剩余时间：' + resttime + 's';
+        if (bspeed == 0)
+            time.innerHTML = '上传已取消';
+    }
+    // 格式化post 传递的数据
+    function postDataFormat(obj) {
+        if (typeof obj != "object") {
+            alert("输入的参数必须是对象");
+            return;
+        }
+
+        // 支持有FormData的浏览器（Firefox 4+ , Safari 5+, Chrome和Android 3+版的Webkit）
+        if (typeof FormData == "function") {
+            var data = new FormData();
+            for (var attr in obj) {
+                data.append(attr, obj[attr]);
+            }
+            return data;
+        } else {
+            // 不支持FormData的浏览器的处理 
+            var arr = new Array();
+            var i = 0;
+            for (var attr in obj) {
+                arr[i] = encodeURIComponent(attr) + "=" + encodeURIComponent(obj[attr]);
+                i++;
+            }
+            return arr.join("&");
+        }
+    }
+
+
+    // 
+
+    function reader(input) {
+        //支持chrome IE10  
+        if (window.FileReader) {
+            var file = input.files[0];
+            filename = file.name.split(".")[0];
+            var reader = new FileReader();
+            reader.onload = function () {
+                console.log(this.result)
+                alert(this.result);
+            }
+            reader.readAsText(file);
+        }
+        //支持IE 7 8 9 10  
+        else if (typeof window.ActiveXObject != 'undefined') {
+            var xmlDoc;
+            xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
+            xmlDoc.async = false;
+            xmlDoc.load(input.value);
+            alert(xmlDoc.xml);
+        }
+        //支持FF  
+        else if (document.implementation && document.implementation.createDocument) {
+            var xmlDoc;
+            xmlDoc = document.implementation.createDocument("", "", null);
+            xmlDoc.async = false;
+            xmlDoc.load(input.value);
+            alert(xmlDoc.xml);
+        } else {
+            alert('error');
+        }
+    }
+</script>
+
+</html>
